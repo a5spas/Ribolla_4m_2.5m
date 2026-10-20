@@ -36,10 +36,18 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 </aside>
 <main id="viewport"><div class="hud"><strong>Ribolla preview</strong><span id="hudStatus">Loading model…</span></div></main>
 </div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
 <script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const viewport=document.getElementById('viewport'),status=document.getElementById('status'),hudStatus=document.getElementById('hudStatus');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x252b34);
 scene.add(new THREE.HemisphereLight(0xffffff,0x68707b,2.1));
