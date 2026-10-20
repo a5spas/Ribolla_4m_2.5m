@@ -121,7 +121,7 @@ loader.load('https://a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb'
     const studio=mode==='studio';
     hemi.visible=studio;key.visible=studio;fill.visible=studio;rim.visible=studio;
     sun.visible=!studio;sunAmbient.visible=!studio;
-    scene.background.set(studio?0x252b34:0x9fb7cf);
+    scene.background.set(0xffffff);
     renderer.toneMappingExposure=studio?1.15:1.0;
     document.getElementById('studioLighting').classList.toggle('selected',studio);
     document.getElementById('studioLighting').classList.toggle('secondary',!studio);
