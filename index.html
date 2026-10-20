@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ribolla Pergola 3D Test</title>
+<style>
+:root{color-scheme:dark;--panel:#171a20;--line:#303641;--text:#f4f6f8;--muted:#aeb7c4}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0e1116;color:var(--text)}
+.app{min-height:100vh;display:grid;grid-template-columns:300px minmax(0,1fr)}
+aside{padding:22px;background:var(--panel);border-right:1px solid var(--line);overflow:auto}
+h1{font-size:20px;margin:0 0 8px}p{color:var(--muted);margin:0 0 16px}
+.status{padding:12px;border-radius:10px;background:#222831;color:var(--muted);overflow-wrap:anywhere}
+.controls{display:grid;gap:9px;margin-top:16px}
+button{background:#e4edf6;color:#151920;border:0;border-radius:9px;padding:10px 12px;font-weight:650;cursor:pointer}
+button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
+.hint{font-size:12px;color:var(--muted);margin-top:18px}
+#viewport{position:relative;min-height:70vh;height:100vh;overflow:hidden}canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:16px;top:16px;background:#11151bcc;border:1px solid #343b46;padding:10px 12px;border-radius:10px;color:#dce3eb;pointer-events:none}
+.hud strong{display:block;margin-bottom:2px}
+@media(max-width:760px){.app{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line)}#viewport{height:65vh;min-height:420px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+<h1>Ribolla 3D Viewer</h1>
+<p>First GitHub Pages test using the exported Ribolla model.</p>
+<div class="status" id="status">Loading Ribolla model…</div>
+<div class="controls">
+<button id="fit">Fit model in view</button>
+<button id="reset" class="secondary">Reset camera</button>
+<button id="wire" class="secondary">Toggle wireframe</button>
+</div>
+<p class="hint">Drag to orbit, use the mouse wheel to zoom, and right-drag to pan. This is a model-viewing test, not the finished configurator.</p>
+</aside>
+<main id="viewport"><div class="hud"><strong>Ribolla preview</strong><span id="hudStatus">Loading model…</span></div></main>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/loaders/GLTFLoader.js';
+const viewport=document.getElementById('viewport'),status=document.getElementById('status'),hudStatus=document.getElementById('hudStatus');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x252b34);
+scene.add(new THREE.HemisphereLight(0xffffff,0x68707b,2.1));
+const key=new THREE.DirectionalLight(0xffffff,3);key.position.set(5,9,7);scene.add(key);
+const fill=new THREE.DirectionalLight(0xd9e8ff,1.3);fill.position.set(-7,3,-5);scene.add(fill);
+const camera=new THREE.PerspectiveCamera(45,1,.01,100000);camera.position.set(7,5,8);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;viewport.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;
+const grid=new THREE.GridHelper(20,20,0x667180,0x434b57);grid.material.transparent=true;grid.material.opacity=.45;scene.add(grid);
+let model=null,materials=[],wire=false,initial=null;
+function fitModel(){if(!model)return;const b=new THREE.Box3().setFromObject(model);if(b.isEmpty())return;const c=b.getCenter(new THREE.Vector3());model.position.sub(c);const bb=new THREE.Box3().setFromObject(model),s=bb.getSize(new THREE.Vector3()),max=Math.max(s.x,s.y,s.z,.1);camera.near=Math.max(max/10000,.001);camera.far=max*100;camera.updateProjectionMatrix();camera.position.set(max*1.35,max*.95,max*1.55);controls.target.set(0,0,0);controls.minDistance=max*.15;controls.maxDistance=max*15;controls.update();grid.position.y=bb.min.y;grid.scale.setScalar(Math.max(max/20,.01));initial={position:camera.position.clone(),target:controls.target.clone()};hudStatus.textContent=`${s.x.toFixed(2)} × ${s.y.toFixed(2)} × ${s.z.toFixed(2)} model units`;}
+document.getElementById('fit').onclick=fitModel;
+document.getElementById('reset').onclick=()=>{if(initial){camera.position.copy(initial.position);controls.target.copy(initial.target);controls.update();}};
+document.getElementById('wire').onclick=()=>{wire=!wire;materials.forEach(m=>{m.wireframe=wire;m.needsUpdate=true;});};
+const loader=new GLTFLoader();
+loader.load('./models/Ribolla_4m_250.glb',gltf=>{model=gltf.scene;scene.add(model);model.traverse(o=>{if(o.isMesh&&o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))materials.push(m);}});fitModel();status.textContent='Model loaded successfully. Rotate and zoom to inspect the pergola.';},undefined,e=>{console.error(e);status.textContent='Could not load the model. Check that models/Ribolla_4m_250.glb exists in the repository and Pages is enabled.';hudStatus.textContent='Model failed to load';});
+function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);resize();
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+</script>
+</body>
+</html>
