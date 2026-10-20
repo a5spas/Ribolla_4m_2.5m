@@ -41,13 +41,10 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 </div>
 <section class="colour-picker">
   <h2>Frame colour</h2>
-  <p>Test colours — these currently recolour the whole model.</p>
+  <p>Choose a Ribolla frame colour. These approximate screen colours currently recolour the whole model.</p>
   <div class="swatches">
-    <button class="swatch selected" data-colour="#b8bdc4" aria-label="Light grey" title="Light grey" style="--swatch:#b8bdc4"></button>
-    <button class="swatch" data-colour="#30343a" aria-label="Anthracite" title="Anthracite" style="--swatch:#30343a"></button>
-    <button class="swatch" data-colour="#f2f1ec" aria-label="White" title="White" style="--swatch:#f2f1ec"></button>
-    <button class="swatch" data-colour="#17191c" aria-label="Black" title="Black" style="--swatch:#17191c"></button>
-    <button class="swatch" data-colour="#8a8d90" aria-label="Grey" title="Grey" style="--swatch:#8a8d90"></button>
+    <button class="swatch selected" data-colour="#383E42" aria-label="RAL 7024 Graphite Grey" title="RAL 7024 Graphite Grey" style="--swatch:#383E42"></button>
+    <button class="swatch" data-colour="#0A0A0A" aria-label="RAL 9005 Jet Black" title="RAL 9005 Jet Black" style="--swatch:#0A0A0A"></button>
   </div>
   <div id="selectedColour" class="selected-colour">Selected: Light grey</div>
 </section>
@@ -83,24 +80,24 @@ document.getElementById('fit').onclick=fitModel;
 document.getElementById('reset').onclick=()=>{if(initial){camera.position.copy(initial.position);controls.target.copy(initial.target);controls.update();}};
 document.getElementById('wire').onclick=()=>{wire=!wire;materials.forEach(m=>{m.wireframe=wire;m.needsUpdate=true;});};
 const loader=new GLTFLoader();
-loader.load('./models/Ribolla_4m_250.glb',gltf=>{
+loader.load('https://a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb',gltf=>{
   model=gltf.scene;
   // Diagnostic shaded grey material. Recompute normals and render both sides
   // to help with models exported with missing or inconsistent normals.
   const testMaterial=new THREE.MeshStandardMaterial({
-    color:0xb8bdc4,
+    color:0x383e42,
     metalness:0.03,
     roughness:0.68,
     side:THREE.DoubleSide
   });
-  const colourNames={'#b8bdc4':'Light grey','#30343a':'Anthracite','#f2f1ec':'White','#17191c':'Black','#8a8d90':'Grey'};
+  const colourNames={'#383e42':'RAL 7024 — Graphite Grey','#0a0a0a':'RAL 9005 — Jet Black'};
   document.querySelectorAll('.swatch').forEach(button=>{
     button.addEventListener('click',()=>{
       const hex=button.dataset.colour;
       testMaterial.color.set(hex);
       testMaterial.needsUpdate=true;
       document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('selected',s===button));
-      document.getElementById('selectedColour').textContent='Selected: '+colourNames[hex];
+      document.getElementById('selectedColour').textContent='Selected: '+(colourNames[hex.toLowerCase()]||hex);
     });
   });
   model.traverse(o=>{
@@ -119,7 +116,7 @@ loader.load('./models/Ribolla_4m_250.glb',gltf=>{
 },undefined,e=>{
   console.error('Ribolla GLB load error:', e);
   const detail = e && (e.message || e.target && e.target.statusText) ? (e.message || e.target.statusText) : 'Unknown loading error';
-  status.textContent='Model failed to load: '+detail+'. Check the browser console for details.';
+  status.textContent='Model failed to load: '+detail+'. Model URL: a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb';
   hudStatus.textContent='Model failed to load';
 });
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);resize();
