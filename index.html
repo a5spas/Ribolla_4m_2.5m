@@ -12,6 +12,13 @@ aside{padding:22px;background:var(--panel);border-right:1px solid var(--line);ov
 h1{font-size:20px;margin:0 0 8px}p{color:var(--muted);margin:0 0 16px}
 .status{padding:12px;border-radius:10px;background:#222831;color:var(--muted);overflow-wrap:anywhere}
 .controls{display:grid;gap:9px;margin-top:16px}
+.colour-picker{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.colour-picker h2{font-size:15px;margin:0 0 6px}
+.colour-picker p{font-size:12px;margin-bottom:12px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+button.swatch{width:34px;height:34px;padding:0;border-radius:50%;background:var(--swatch);border:2px solid #68717e;box-shadow:inset 0 0 0 2px #171a20}
+button.swatch.selected{outline:2px solid #f4f6f8;outline-offset:2px}
+.selected-colour{font-size:12px;color:var(--muted);margin-top:12px}
 button{background:#e4edf6;color:#151920;border:0;border-radius:9px;padding:10px 12px;font-weight:650;cursor:pointer}
 button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 .hint{font-size:12px;color:var(--muted);margin-top:18px}
@@ -32,7 +39,19 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 <button id="reset" class="secondary">Reset camera</button>
 <button id="wire" class="secondary">Toggle wireframe</button>
 </div>
-<p class="hint">Drag to orbit, use the mouse wheel to zoom, and right-drag to pan. This is a model-viewing test, not the finished configurator.</p>
+<section class="colour-picker">
+  <h2>Frame colour</h2>
+  <p>Test colours — these currently recolour the whole model.</p>
+  <div class="swatches">
+    <button class="swatch selected" data-colour="#b8bdc4" aria-label="Light grey" title="Light grey" style="--swatch:#b8bdc4"></button>
+    <button class="swatch" data-colour="#30343a" aria-label="Anthracite" title="Anthracite" style="--swatch:#30343a"></button>
+    <button class="swatch" data-colour="#f2f1ec" aria-label="White" title="White" style="--swatch:#f2f1ec"></button>
+    <button class="swatch" data-colour="#17191c" aria-label="Black" title="Black" style="--swatch:#17191c"></button>
+    <button class="swatch" data-colour="#8a8d90" aria-label="Grey" title="Grey" style="--swatch:#8a8d90"></button>
+  </div>
+  <div id="selectedColour" class="selected-colour">Selected: Light grey</div>
+</section>
+<p class="hint">Drag to orbit, use the mouse wheel to zoom, and right-drag to pan. This is an early configurator test, not the finished product configurator.</p>
 </aside>
 <main id="viewport"><div class="hud"><strong>Ribolla preview</strong><span id="hudStatus">Loading model…</span></div></main>
 </div>
@@ -73,6 +92,16 @@ loader.load('./models/Ribolla_4m_250.glb',gltf=>{
     metalness:0.03,
     roughness:0.68,
     side:THREE.DoubleSide
+  });
+  const colourNames={'#b8bdc4':'Light grey','#30343a':'Anthracite','#f2f1ec':'White','#17191c':'Black','#8a8d90':'Grey'};
+  document.querySelectorAll('.swatch').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const hex=button.dataset.colour;
+      testMaterial.color.set(hex);
+      testMaterial.needsUpdate=true;
+      document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('selected',s===button));
+      document.getElementById('selectedColour').textContent='Selected: '+colourNames[hex];
+    });
   });
   model.traverse(o=>{
     if(o.isMesh){
