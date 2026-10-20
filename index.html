@@ -49,8 +49,8 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
   <h2>Frame colour</h2>
   <p>Choose the aluminium frame texture. The glass roof keeps its exported material.</p>
   <div class="swatches">
-    <button class="swatch selected" data-colour="#383E42" aria-label="RAL 7024 Graphite Grey" title="RAL 7024 Graphite Grey" style="--swatch:#383E42"></button>
-    <button class="swatch" data-colour="#0A0A0A" aria-label="RAL 9005 Jet Black" title="RAL 9005 Jet Black" style="--swatch:#0A0A0A"></button>
+    <button type="button" class="swatch selected" data-colour="#383E42" aria-label="RAL 7024 Graphite Grey" title="RAL 7024 Graphite Grey" style="--swatch:#383E42"></button>
+    <button type="button" class="swatch" data-colour="#0A0A0A" aria-label="RAL 9005 Jet Black" title="RAL 9005 Jet Black" style="--swatch:#0A0A0A"></button>
   </div>
   <div id="selectedColour" class="selected-colour">Selected: RAL 7024 — Graphite Grey</div>
 </section>
@@ -58,8 +58,8 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
   <h2>Lighting setup</h2>
   <p>Switch between two preview environments.</p>
   <div class="lighting-buttons">
-    <button id="studioLighting" class="lighting-choice selected">Studio lighting</button>
-    <button id="sunLighting" class="lighting-choice secondary">Direct sun</button>
+    <button type="button" id="studioLighting" class="lighting-choice selected">Studio lighting</button>
+    <button type="button" id="sunLighting" class="lighting-choice secondary">Direct sun</button>
   </div>
   <div id="lightingDescription" class="selected-colour">Soft, balanced studio-style illumination.</div>
 </section>
@@ -134,6 +134,47 @@ function fitModel(){if(!model)return;const b=new THREE.Box3().setFromObject(mode
 document.getElementById('fit').onclick=fitModel;
 document.getElementById('reset').onclick=()=>{if(initial){camera.position.copy(initial.position);controls.target.copy(initial.target);controls.update();}};
 document.getElementById('wire').onclick=()=>{wire=!wire;materials.forEach(m=>{m.wireframe=wire;m.needsUpdate=true;});};
+
+// Keep colour selection and lighting selection completely independent.
+document.querySelector('[data-colour="#383E42"]').addEventListener('click',()=>{
+  setFrameColour('#383E42');
+});
+document.querySelector('[data-colour="#0A0A0A"]').addEventListener('click',()=>{
+  setFrameColour('#0A0A0A');
+});
+
+function setLighting(mode){
+  const isStudio = mode === 'studio';
+  hemi.visible = isStudio;
+  key.visible = isStudio;
+  fill.visible = isStudio;
+  rim.visible = isStudio;
+  sun.visible = !isStudio;
+  sunAmbient.visible = !isStudio;
+
+  const studioButton = document.getElementById('studioLighting');
+  const sunButton = document.getElementById('sunLighting');
+  studioButton.classList.toggle('selected', isStudio);
+  studioButton.classList.toggle('secondary', !isStudio);
+  sunButton.classList.toggle('selected', !isStudio);
+  sunButton.classList.toggle('secondary', isStudio);
+
+  document.getElementById('lightingDescription').textContent = isStudio
+    ? 'Soft, balanced studio-style illumination.'
+    : 'Bright directional sunlight with softer ambient fill.';
+}
+document.getElementById('studioLighting').addEventListener('click', event=>{
+  event.preventDefault();
+  event.stopPropagation();
+  setLighting('studio');
+});
+document.getElementById('sunLighting').addEventListener('click', event=>{
+  event.preventDefault();
+  event.stopPropagation();
+  setLighting('sun');
+});
+setLighting('studio');
+
 const loader=new GLTFLoader();
 loader.load('https://a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb',gltf=>{
   model=gltf.scene;
