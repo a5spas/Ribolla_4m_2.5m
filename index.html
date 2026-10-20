@@ -47,7 +47,7 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 </div>
 <section class="colour-picker">
   <h2>Frame colour</h2>
-  <p>Choose a Ribolla frame colour. These approximate screen colours currently recolour the whole model.</p>
+  <p>Choose the aluminium frame texture. The glass roof keeps its exported material.</p>
   <div class="swatches">
     <button class="swatch selected" data-colour="#383E42" aria-label="RAL 7024 Graphite Grey" title="RAL 7024 Graphite Grey" style="--swatch:#383E42"></button>
     <button class="swatch" data-colour="#0A0A0A" aria-label="RAL 9005 Jet Black" title="RAL 9005 Jet Black" style="--swatch:#0A0A0A"></button>
@@ -80,7 +80,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const viewport=document.getElementById('viewport'),status=document.getElementById('status'),hudStatus=document.getElementById('hudStatus');
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x252b34);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
 const hemi=new THREE.HemisphereLight(0xffffff,0x7b8490,3.6);scene.add(hemi);
 const key=new THREE.DirectionalLight(0xffffff,4.8);key.position.set(5,9,7);scene.add(key);
 const fill=new THREE.DirectionalLight(0xe3edff,3.0);fill.position.set(-7,4,-5);scene.add(fill);
@@ -92,6 +92,44 @@ const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;
 const grid=new THREE.GridHelper(20,20,0x667180,0x434b57);grid.material.transparent=true;grid.material.opacity=.45;scene.add(grid);
 let model=null,materials=[],wire=false,initial=null;
+const frameMaterials=[];
+const frameTextureCache=new Map();
+const ASSET_ROOT='https://a5spas.github.io/Ribolla_4m_2.5m/';
+const FRAME_TEXTURES={
+  '#383E42':ASSET_ROOT+'Materials/ral_7024.jpg',
+  '#0A0A0A':ASSET_ROOT+'Materials/ral_9005.jpg'
+};
+function loadFrameTexture(url){
+  if(frameTextureCache.has(url)) return frameTextureCache.get(url);
+  const promise=new Promise((resolve,reject)=>{
+    new THREE.TextureLoader().load(url,texture=>{
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.flipY=false;
+      texture.wrapS=THREE.RepeatWrapping; texture.wrapT=THREE.RepeatWrapping;
+      texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
+      texture.needsUpdate=true; resolve(texture);
+    },undefined,()=>{frameTextureCache.delete(url);reject(new Error('Texture failed to load: '+url));});
+  });
+  frameTextureCache.set(url,promise); return promise;
+}
+async function setFrameColour(hex){
+  const url=FRAME_TEXTURES[hex];
+  if(!url || !frameMaterials.length) return;
+  try{
+    const texture=await loadFrameTexture(url);
+    frameMaterials.forEach(mat=>{
+      mat.map=texture; mat.color.setRGB(1,1,1);
+      if('metalness' in mat) mat.metalness=0;
+      if('roughness' in mat && mat.roughness<0.12) mat.roughness=0.35;
+      mat.needsUpdate=true;
+    });
+    const label=hex==='#0A0A0A'?'RAL 9005 — Jet Black':'RAL 7024 — Graphite Grey';
+    document.getElementById('selectedColour').textContent='Selected: '+label;
+    document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('selected',b.dataset.colour===hex));
+    status.textContent='Frame texture loaded: '+label+'. Roof material preserved.';
+  }catch(err){console.error(err);status.textContent='Could not load '+url+'. Check the Materials folder and filename.';}
+}
+
 function fitModel(){if(!model)return;const b=new THREE.Box3().setFromObject(model);if(b.isEmpty())return;const c=b.getCenter(new THREE.Vector3());model.position.sub(c);const bb=new THREE.Box3().setFromObject(model),s=bb.getSize(new THREE.Vector3()),max=Math.max(s.x,s.y,s.z,.1);camera.near=Math.max(max/10000,.001);camera.far=max*100;camera.updateProjectionMatrix();camera.position.set(max*1.35,max*.95,max*1.55);controls.target.set(0,0,0);controls.minDistance=max*.15;controls.maxDistance=max*15;controls.update();grid.position.y=bb.min.y;grid.scale.setScalar(Math.max(max/20,.01));initial={position:camera.position.clone(),target:controls.target.clone()};hudStatus.textContent=`${s.x.toFixed(2)} × ${s.y.toFixed(2)} × ${s.z.toFixed(2)} model units`;}
 document.getElementById('fit').onclick=fitModel;
 document.getElementById('reset').onclick=()=>{if(initial){camera.position.copy(initial.position);controls.target.copy(initial.target);controls.update();}};
@@ -99,57 +137,31 @@ document.getElementById('wire').onclick=()=>{wire=!wire;materials.forEach(m=>{m.
 const loader=new GLTFLoader();
 loader.load('https://a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb',gltf=>{
   model=gltf.scene;
-  // Diagnostic shaded grey material. Recompute normals and render both sides
-  // to help with models exported with missing or inconsistent normals.
-  const testMaterial=new THREE.MeshStandardMaterial({
-    color:0x383e42,
-    metalness:0.03,
-    roughness:0.68,
-    side:THREE.DoubleSide
-  });
-  const colourNames={'#383e42':'RAL 7024 — Graphite Grey','#0a0a0a':'RAL 9005 — Jet Black'};
-  document.querySelectorAll('.swatch').forEach(button=>{
-    button.addEventListener('click',()=>{
-      const hex=button.dataset.colour;
-      testMaterial.color.set(hex);
-      testMaterial.needsUpdate=true;
-      document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('selected',s===button));
-      document.getElementById('selectedColour').textContent='Selected: '+(colourNames[hex.toLowerCase()]||hex);
-    });
-  });
-  function setLighting(mode){
-    const studio=mode==='studio';
-    hemi.visible=studio;key.visible=studio;fill.visible=studio;rim.visible=studio;
-    sun.visible=!studio;sunAmbient.visible=!studio;
-    scene.background.set(0xffffff);
-    renderer.toneMappingExposure=studio?1.15:1.0;
-    document.getElementById('studioLighting').classList.toggle('selected',studio);
-    document.getElementById('studioLighting').classList.toggle('secondary',!studio);
-    document.getElementById('sunLighting').classList.toggle('selected',!studio);
-    document.getElementById('sunLighting').classList.toggle('secondary',studio);
-    document.getElementById('lightingDescription').textContent=studio
-      ?'Soft, balanced studio-style illumination.'
-      :'Direct warm sunlight with stronger directional shadows.';
-  }
-  document.getElementById('studioLighting').addEventListener('click',()=>setLighting('studio'));
-  document.getElementById('sunLighting').addEventListener('click',()=>setLighting('sun'));
   model.traverse(o=>{
-    if(o.isMesh){
-      if(o.geometry && o.geometry.attributes.position){
-        o.geometry=o.geometry.clone();
-        o.geometry.computeVertexNormals();
+    if(!o.isMesh || !o.material) return;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    const updated=mats.map(original=>{
+      const mat=original.clone();
+      const name=(original.name||'').toLowerCase();
+      if(name.includes('ral_7024') || name.includes('ral_9005')){
+        frameMaterials.push(mat);
       }
-      o.material=testMaterial;
-      materials.push(testMaterial);
-    }
+      return mat;
+    });
+    o.material=Array.isArray(o.material)?updated:updated[0];
   });
   scene.add(model);
+  // Apply the selected RAL image texture to frame material targets only; roof glass stays untouched.
+  if(frameMaterials.length===0){
+    status.textContent='Model loaded, but no RAL frame material was detected. Check the exported GLB material names.';
+  } else {
+    setFrameColour('#383E42');
+    status.textContent='Model loaded with exported materials. Frame colour changes separately; roof glass is preserved.';
+  }
   fitModel();
-  status.textContent='Model loaded with shaded grey test material and recalculated normals.';
 },undefined,e=>{
-  console.error('Ribolla GLB load error:', e);
-  const detail = e && (e.message || e.target && e.target.statusText) ? (e.message || e.target.statusText) : 'Unknown loading error';
-  status.textContent='Model failed to load: '+detail+'. Model URL: a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb';
+  console.error('Ribolla GLB load error:',e);
+  status.textContent='Model failed to load. Check the GitHub Pages model URL and browser console.';
   hudStatus.textContent='Model failed to load';
 });
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);resize();
