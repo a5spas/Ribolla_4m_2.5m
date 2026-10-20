@@ -117,8 +117,9 @@ loader.load('./models/Ribolla_4m_250.glb',gltf=>{
   fitModel();
   status.textContent='Model loaded with shaded grey test material and recalculated normals.';
 },undefined,e=>{
-  console.error(e);
-  status.textContent='Could not load the model. Check that models/Ribolla_4m_250.glb exists in the repository and Pages is enabled.';
+  console.error('Ribolla GLB load error:', e);
+  const detail = e && (e.message || e.target && e.target.statusText) ? (e.message || e.target.statusText) : 'Unknown loading error';
+  status.textContent='Model failed to load: '+detail+'. Check the browser console for details.';
   hudStatus.textContent='Model failed to load';
 });
 function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();renderer.setSize(w,h,false);}new ResizeObserver(resize).observe(viewport);resize();
