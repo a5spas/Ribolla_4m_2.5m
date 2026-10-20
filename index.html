@@ -19,6 +19,12 @@ h1{font-size:20px;margin:0 0 8px}p{color:var(--muted);margin:0 0 16px}
 button.swatch{width:34px;height:34px;padding:0;border-radius:50%;background:var(--swatch);border:2px solid #68717e;box-shadow:inset 0 0 0 2px #171a20}
 button.swatch.selected{outline:2px solid #f4f6f8;outline-offset:2px}
 .selected-colour{font-size:12px;color:var(--muted);margin-top:12px}
+.lighting-picker{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+.lighting-picker h2{font-size:15px;margin:0 0 6px}
+.lighting-picker p{font-size:12px;margin-bottom:12px}
+.lighting-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button.lighting-choice{padding:9px 8px;font-size:12px}
+button.lighting-choice.selected{outline:2px solid #f4f6f8;outline-offset:1px}
 button{background:#e4edf6;color:#151920;border:0;border-radius:9px;padding:10px 12px;font-weight:650;cursor:pointer}
 button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
 .hint{font-size:12px;color:var(--muted);margin-top:18px}
@@ -46,7 +52,16 @@ button.secondary{background:#2b323d;color:var(--text);border:1px solid #424b59}
     <button class="swatch selected" data-colour="#383E42" aria-label="RAL 7024 Graphite Grey" title="RAL 7024 Graphite Grey" style="--swatch:#383E42"></button>
     <button class="swatch" data-colour="#0A0A0A" aria-label="RAL 9005 Jet Black" title="RAL 9005 Jet Black" style="--swatch:#0A0A0A"></button>
   </div>
-  <div id="selectedColour" class="selected-colour">Selected: Light grey</div>
+  <div id="selectedColour" class="selected-colour">Selected: RAL 7024 — Graphite Grey</div>
+</section>
+<section class="lighting-picker">
+  <h2>Lighting setup</h2>
+  <p>Switch between two preview environments.</p>
+  <div class="lighting-buttons">
+    <button id="studioLighting" class="lighting-choice selected">Studio lighting</button>
+    <button id="sunLighting" class="lighting-choice secondary">Direct sun</button>
+  </div>
+  <div id="lightingDescription" class="selected-colour">Soft, balanced studio-style illumination.</div>
 </section>
 <p class="hint">Drag to orbit, use the mouse wheel to zoom, and right-drag to pan. This is an early configurator test, not the finished product configurator.</p>
 </aside>
@@ -66,10 +81,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const viewport=document.getElementById('viewport'),status=document.getElementById('status'),hudStatus=document.getElementById('hudStatus');
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x252b34);
-scene.add(new THREE.HemisphereLight(0xffffff,0x7b8490,2.4));
+const hemi=new THREE.HemisphereLight(0xffffff,0x7b8490,2.4);scene.add(hemi);
 const key=new THREE.DirectionalLight(0xffffff,3.2);key.position.set(5,9,7);scene.add(key);
 const fill=new THREE.DirectionalLight(0xe3edff,2.0);fill.position.set(-7,4,-5);scene.add(fill);
 const rim=new THREE.DirectionalLight(0xffffff,1.5);rim.position.set(0,7,-8);scene.add(rim);
+const sun=new THREE.DirectionalLight(0xfff0d6,4.2);sun.position.set(-8,12,5);sun.visible=false;scene.add(sun);
+const sunAmbient=new THREE.HemisphereLight(0xdce8ff,0x77716a,1.0);sunAmbient.visible=false;scene.add(sunAmbient);
 const camera=new THREE.PerspectiveCamera(45,1,.01,100000);camera.position.set(7,5,8);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;viewport.appendChild(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.06;
@@ -100,6 +117,22 @@ loader.load('https://a5spas.github.io/Ribolla_4m_2.5m/models/Ribolla_4m_250.glb'
       document.getElementById('selectedColour').textContent='Selected: '+(colourNames[hex.toLowerCase()]||hex);
     });
   });
+  function setLighting(mode){
+    const studio=mode==='studio';
+    hemi.visible=studio;key.visible=studio;fill.visible=studio;rim.visible=studio;
+    sun.visible=!studio;sunAmbient.visible=!studio;
+    scene.background.set(studio?0x252b34:0x9fb7cf);
+    renderer.toneMappingExposure=studio?1.15:1.0;
+    document.getElementById('studioLighting').classList.toggle('selected',studio);
+    document.getElementById('studioLighting').classList.toggle('secondary',!studio);
+    document.getElementById('sunLighting').classList.toggle('selected',!studio);
+    document.getElementById('sunLighting').classList.toggle('secondary',studio);
+    document.getElementById('lightingDescription').textContent=studio
+      ?'Soft, balanced studio-style illumination.'
+      :'Direct warm sunlight with stronger directional shadows.';
+  }
+  document.getElementById('studioLighting').addEventListener('click',()=>setLighting('studio'));
+  document.getElementById('sunLighting').addEventListener('click',()=>setLighting('sun'));
   model.traverse(o=>{
     if(o.isMesh){
       if(o.geometry && o.geometry.attributes.position){
